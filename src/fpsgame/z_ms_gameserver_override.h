@@ -63,7 +63,20 @@ void authsucceeded(int m, uint id, int priv)
     bool connecting = false;
     if(ci->connectauth)
     {
-        if(z_allowauthconnect(priv) || (ci->xi.wlauth && !strcmp(ci->xi.wlauth, ci->authdesc)))
+        // name-protect flow: require the specific identity we asked for
+        if(ci->xi.authident)
+        {
+            bool ok = ci->xi.claim.isset()
+                   && !strcasecmp(ci->xi.claim.name, ci->authname)
+                   && !strcasecmp(ci->xi.claim.desc, ci->authdesc);
+            if(!ok) { disconnect_client(ci->clientnum, ci->connectauth); return; }
+            // mark who they are for later checks and complete the connection
+            ci->xi.ident.set(ci->authname, ci->authdesc);
+            ci->xi.authident = false;
+            connected(ci);
+            connecting = true;
+        }
+        else if(z_allowauthconnect(priv) || (ci->xi.wlauth && !strcmp(ci->xi.wlauth, ci->authdesc)))
         {
             connected(ci);
             connecting = true;

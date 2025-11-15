@@ -3295,6 +3295,7 @@ namespace server
     }
 
     #include "z_msgfilter.h"
+    #include "z_nameprotect.h"
     #include "z_patchmap.h"
     #include "z_maploaded.h"
     #include "z_antiflood.h"
@@ -3326,6 +3327,9 @@ namespace server
                     getstring(authdesc, p, sizeof(authdesc));
                     getstring(authname, p, sizeof(authname));
                     int disc = allowconnect(ci, password);
+                    // if this name is reserved, force connect-auth and prompt the right /auth
+                    int npdisc = z_nameprotect_onconnect(ci);
+                    if(!disc && npdisc) disc = npdisc;
                     z_geoip_log(ci);
                     if(disc)
                     {
@@ -3742,6 +3746,8 @@ namespace server
                 Z_ANTIFLOOD(ci, N_SWITCHNAME);
                 if(!allowmsg(ci, ci, type)) break;
                 filtertext(text, text, false, false, MAXNAMELEN);
+                // disallow renaming into a reserved name/tag unless the client owns it
+                if(z_nameprotect_onrename(ci, text)) break;
                 if(!text[0]) copystring(text, "unnamed");
                 if(!strcmp(ci->name, text)) break;
                 z_log_rename(ci, text);
